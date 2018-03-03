@@ -15,9 +15,24 @@ const Crawler = require("crawler");
 const csvWriter = require('csv-write-stream');
 const fibrous = require('fibrous');
 const fs = require('fs');
+const winston = require('winston');
 
 const outputFilename = 'out.csv';
 const skipCount = process.env.SKIP ? parseInt(process.env.SKIP, 10) : 0;
+const myFormat = winston.format.printf(info => {
+  return `${info.timestamp} [${info.label}] ${info.level}: ${info.message}`;
+});
+const logger = winston.createLogger({
+  format: winston.format.combine(
+    winston.format.label({ label: 'RP Crawler' }),
+    winston.format.timestamp(),
+    myFormat
+  ),
+  transports: [
+    new winston.transports.Console(),
+    new winston.transports.File({ filename: 'combined.log' })
+  ]
+});
 
 function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min)) + min;
@@ -78,7 +93,7 @@ function mainSync() {
   const totalPage = getTotalPage.sync(proxyList);
 
   let doneCount = 0;
-  console.log(`Total: ${totalPage} pages`);
+  logger.info(`Total: ${totalPage} pages`);
 
   const writer = csvWriter();
   writer.pipe(fs.createWriteStream(outputFilename))
@@ -90,7 +105,7 @@ function mainSync() {
     // This will be called for each crawled page
     callback : function (error, res, done) {
       if (error) {
-        console.log(error);
+        logger.error(error);
       } else {
         const $ = parseTemplateBody(res.body);
         $('#company-list .company').each((index, item) => {
@@ -106,7 +121,7 @@ function mainSync() {
 
       const curPercentage = parseInt((doneCount + 1) / totalPage * 100, 10);
       if (parseInt(doneCount / totalPage * 100, 10) !== curPercentage) {
-        console.log(`Progressing...${doneCount + 1} done (${curPercentage}%)`);
+        logger.info(`Progressing...${doneCount + 1} done (${curPercentage}%)`);
       }
 
       doneCount++;
@@ -121,7 +136,7 @@ function mainSync() {
   let skipped = 0;
   if (skipCount) {
     doneCount += skipCount;
-    console.log(`Skip ${skipCount} entries`);
+    logger.info(`Skip ${skipCount} entries`);
   }
   c.on('schedule', options => options.proxy=proxyList[getRandomInt(0, proxyList.length)]);
   _.times(totalPage, (pageIdx) => {
@@ -136,7 +151,7 @@ function mainSync() {
 if (require.main === module) {
   fibrous(mainSync)((err, res) => {
     if (err) {
-      console.error(err);
+      logger.error(err);
     }
   });
 }
