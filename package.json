@@ -18,6 +18,8 @@
   },
   "homepage": "https://github.com/sglim/rp_crawler#readme",
   "dependencies": {
-    "crawler": "^1.1.2"
+    "cheerio": "^1.0.0-rc.2",
+    "crawler": "^1.1.2",
+    "lodash": "^4.17.5"
   }
 }
