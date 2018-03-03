@@ -64,6 +64,7 @@ function getProxies(cb) {
         }, []);
         cb(null, ipPortList);
       }
+      done();
     }
   });
   c.queue('https://www.sslproxies.org/');
@@ -82,6 +83,7 @@ function getTotalPage(proxyList, cb) {
         const lastPage = parseInt(lastPageStr.replace(',', ''), 10);
         cb(null, lastPage);
       }
+      done();
     }
   });
   c.on('schedule', options => options.proxy=proxyList[0]);
