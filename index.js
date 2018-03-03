@@ -9,7 +9,10 @@ const _ = require('lodash');
 const cheerio = require('cheerio')
 const Crawler = require("crawler");
 const csvWriter = require('csv-write-stream');
+const fibrous = require('fibrous');
 const fs = require('fs');
+
+const outputFilename = 'out.csv';
 
 function parseTemplateBody(body) {
   const parsed = JSON.parse(body);
@@ -17,44 +20,42 @@ function parseTemplateBody(body) {
   return cheerio.load(template)
 }
 
-function getPage() {
+function getTotalPage(cb) {
   const c = new Crawler({
     jquery: false,
     maxConnections : 10,
-    // This will be called for each crawled page
-    callback : function (error, res, done) {
-      if(error) {
-        console.log(error);
+    callback: function (error, res, done) {
+      if (error) {
+        cb(error);
       } else {
         const $ = parseTemplateBody(res.body);
-        const lastPage = $('.pagination .computer .item:last-child').text();
-        console.log(parseInt(lastPage.replace(',', ''), 10));
-        // TODO(sglim): Crawl page here.
+        const lastPageStr = $('.pagination .computer .item:last-child').text();
+        const lastPage = parseInt(lastPageStr.replace(',', ''), 10);
+        cb(null, lastPage);
       }
     }
   });
   c.queue('https://www.rocketpunch.com/api/companies/template');
 }
 
-function main() {
-  getPage();
-}
+function mainSync() {
+  const totalPage = getTotalPage.sync();
 
-function crawl(page) {
+  let doneCount = 0;
+  console.log(`Total: ${totalPage} pages`);
+
   const writer = csvWriter();
-  writer.pipe(fs.createWriteStream('out.csv'))
+  writer.pipe(fs.createWriteStream(outputFilename))
 
   const c = new Crawler({
     jquery: false,
     maxConnections : 10,
     // This will be called for each crawled page
     callback : function (error, res, done) {
-      if(error) {
+      if (error) {
         console.log(error);
       } else {
-        const parsed = JSON.parse(res.body);
-        const template = parsed.data.template;
-        const $ = cheerio.load(template)
+        const $ = parseTemplateBody(res.body);
         $('#company-list .company').each((index, item) => {
           const name = $(item).find('.name strong').text().trim();
           const metadata = $(item).find('.meta').text().trim();
@@ -65,16 +66,32 @@ function crawl(page) {
           });
         });
       }
-      // TODO(sglim): Finish iff all data received
-      writer.end()
+
+      const curPercentage = parseInt((doneCount + 1) / totalPage * 100, 10);
+      if (parseInt(doneCount / totalPage * 100, 10) !== curPercentage) {
+        console.log(`Progressing...${curPercentage}%`);
+      }
+
+      doneCount++;
+      if (doneCount === totalPage) {
+        // Finish iff all data received
+        writer.end();
+      }
       done();
     }
   });
 
-  c.queue(`https://www.rocketpunch.com/api/companies/template?page=${page}&q=`);
+  _.times(totalPage, (pageIdx) => {
+    c.queue(`https://www.rocketpunch.com/api/companies/template?page=${pageIdx + 1}`);
+  });
+
 }
 
 if (require.main === module) {
-  main();
+  fibrous(mainSync)((err, res) => {
+    if (err) {
+      console.error(err);
+    }
+  });
 }
 
