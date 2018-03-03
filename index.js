@@ -1,9 +1,13 @@
 'use strict';
 
+// Usage:
+// npm start
+// or (to skip some page)
+// SKIP={skipCount} npm start
+
 // Sample
 // No! https://www.rocketpunch.com/companies?page=1&q=
 // Yes! https://www.rocketpunch.com/api/companies/template?page=1&q=
-
 
 const _ = require('lodash');
 const cheerio = require('cheerio')
@@ -13,6 +17,11 @@ const fibrous = require('fibrous');
 const fs = require('fs');
 
 const outputFilename = 'out.csv';
+const skipCount = process.env.SKIP ? parseInt(process.env.SKIP, 10) : 0;
+
+function getRandomInt(min, max) {
+  return Math.floor(Math.random() * (max - min)) + min;
+}
 
 function parseTemplateBody(body) {
   const parsed = JSON.parse(body);
@@ -20,10 +29,35 @@ function parseTemplateBody(body) {
   return cheerio.load(template)
 }
 
-function getTotalPage(cb) {
+function getProxies(cb) {
+  // https://www.sslproxies.org/
+  const c = new Crawler({
+    maxConnections : 1,
+    callback: function (error, res, done) {
+      if (error) {
+        cb(error);
+      } else {
+        const $ = res.$;
+        const ipPortList = _.reduce($('#proxylisttable tr'), (result, tr) => {
+          const ipPort = $(tr).find('td');
+          const ip = $(ipPort[0]).text().trim();
+          const port = $(ipPort[1]).text().trim();
+          if (!_.isEmpty(ip) && !_.isEmpty(port)) {
+            result.push(`http://${ip}:${port}`);
+          }
+          return result;
+        }, []);
+        cb(null, ipPortList);
+      }
+    }
+  });
+  c.queue('https://www.sslproxies.org/');
+}
+
+function getTotalPage(proxyList, cb) {
   const c = new Crawler({
     jquery: false,
-    maxConnections : 10,
+    maxConnections : 1,
     callback: function (error, res, done) {
       if (error) {
         cb(error);
@@ -35,11 +69,13 @@ function getTotalPage(cb) {
       }
     }
   });
+  c.on('schedule', options => options.proxy=proxyList[0]);
   c.queue('https://www.rocketpunch.com/api/companies/template');
 }
 
 function mainSync() {
-  const totalPage = getTotalPage.sync();
+  const proxyList = getProxies.sync();
+  const totalPage = getTotalPage.sync(proxyList);
 
   let doneCount = 0;
   console.log(`Total: ${totalPage} pages`);
@@ -49,6 +85,7 @@ function mainSync() {
 
   const c = new Crawler({
     jquery: false,
+    // rateLimit: 100,
     maxConnections : 10,
     // This will be called for each crawled page
     callback : function (error, res, done) {
@@ -69,7 +106,7 @@ function mainSync() {
 
       const curPercentage = parseInt((doneCount + 1) / totalPage * 100, 10);
       if (parseInt(doneCount / totalPage * 100, 10) !== curPercentage) {
-        console.log(`Progressing...${curPercentage}%`);
+        console.log(`Progressing...${doneCount + 1} done (${curPercentage}%)`);
       }
 
       doneCount++;
@@ -81,10 +118,19 @@ function mainSync() {
     }
   });
 
+  let skipped = 0;
+  if (skipCount) {
+    doneCount += skipCount;
+    console.log(`Skip ${skipCount} entries`);
+  }
+  c.on('schedule', options => options.proxy=proxyList[getRandomInt(0, proxyList.length)]);
   _.times(totalPage, (pageIdx) => {
+    if (skipCount && skipped < skipCount) {
+      skipped++;
+      return;
+    }
     c.queue(`https://www.rocketpunch.com/api/companies/template?page=${pageIdx + 1}`);
   });
-
 }
 
 if (require.main === module) {
