@@ -1,0 +1,23 @@
+{
+  "name": "rp_crawler",
+  "version": "1.0.0",
+  "description": "Rocket Punch Crawler",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sglim/rp_crawler.git"
+  },
+  "author": "sglim",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/sglim/rp_crawler/issues"
+  },
+  "homepage": "https://github.com/sglim/rp_crawler#readme",
+  "dependencies": {
+    "crawler": "^1.1.2"
+  }
+}
