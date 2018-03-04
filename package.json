@@ -7,8 +7,10 @@
     "start": "node rp_crawler.js",
     "rp": "node rp_crawler.js",
     "dd": "node dd_crawler.js",
+    "keyword": "node keyword_gen.js",
     "test_mecab": "node test_mecab.js",
     "test_pagerank": "node test_pagerank.js",
+    "test_twitter": "node test_twitter.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -24,10 +26,13 @@
   "dependencies": {
     "cheerio": "^1.0.0-rc.2",
     "crawler": "^1.1.2",
+    "csv-parse": "^2.0.4",
     "csv-write-stream": "^2.0.0",
     "fibrous": "^0.4.0",
+    "java": "^0.9.0",
     "lodash": "^4.17.5",
     "mecab-ffi": "^0.2.0",
+    "open-korean-text-node": "^2.0.0",
     "pagerank-js": "^0.3.0",
     "request": "^2.83.0",
     "winston": "^3.0.0-rc1"

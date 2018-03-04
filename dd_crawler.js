@@ -5,11 +5,11 @@ const cheerio = require('cheerio');
 const csvWriter = require('csv-write-stream');
 const fibrous = require('fibrous');
 const fs = require('fs');
-const mecab = require('mecab-ffi');
+// const mecab = require('mecab-ffi');
 const request = require('request');
 const winston = require('winston');
 
-const outputFilename = `out_dd_${_.now()}.csv`;
+const outputFilename = 'out_dd.csv';
 // http://www.demoday.co.kr/companies/category/commerce/1
 const entryCountPerPage = 16;
 
@@ -127,7 +127,7 @@ function mainSync() {
         writer.write(_.assign({
           page: page,
           category: category.title,
-          keyword: _.keys(mecab.sync.extractNounMap(company.desc)).join(','),
+          // keyword: _.keys(mecab.sync.extractNounMap(company.desc)).join(','),
         }, company));
 
       });
