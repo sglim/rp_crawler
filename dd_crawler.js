@@ -1,7 +1,12 @@
 'use strict';
 
+const _ = require('lodash');
+const cheerio = require('cheerio');
 const fibrous = require('fibrous');
+const request = require('request');
 const winston = require('winston');
+
+// http://www.demoday.co.kr/companies/category/commerce/1
 
 const logger = winston.createLogger({
   format: winston.format.combine(
@@ -17,8 +22,37 @@ const logger = winston.createLogger({
   ]
 });
 
+function getCompanies(category, page, cb) {
+  const url = `http://www.demoday.co.kr/companies/category/${category}/${page}`;
+  request({
+    url: url,
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest',
+    }
+  }, function (error, response, body) {
+    if (error) {
+      return cb(error);
+    }
+    if (_.isEmpty(body.trim())) {
+      // empty!
+      return cb(null, []);
+    }
+
+    var $ = cheerio.load(body);
+
+    const companies = _.chain($('li'))
+      .map($)
+      .map(li => ({ title: li.find('.title').text(), desc: li.find('.desc').text() }))
+      .value();
+    return cb(null, companies);
+  });
+}
+
 const main = fibrous(function mainSync() {
-  logger.info('hello!');
+  const compagePage1 = getCompanies.sync('commerce', 1);
+  logger.info(JSON.stringify(compagePage1));
+  // Crawl a page
+  // Until there is a data
 });
 
 if (require.main === module) {
