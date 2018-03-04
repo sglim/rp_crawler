@@ -11,6 +11,7 @@ const winston = require('winston');
 
 const outputFilename = `out_dd_${_.now()}.csv`;
 // http://www.demoday.co.kr/companies/category/commerce/1
+const entryCountPerPage = 16;
 
 const logger = winston.createLogger({
   format: winston.format.combine(
@@ -52,9 +53,7 @@ function getCategories(cb) {
           .value(),
       }))
       .map(obj => _.assign({
-        // TODO(sglim): Use it instead of 1
-        // totalPage: _.ceil(obj.count / entryCountPerPage),
-        totalPage: 1,
+        totalPage: _.ceil(obj.count / entryCountPerPage),
       }, obj))
       .value());
   });
@@ -82,7 +81,9 @@ function getCompanies(category, page, cb) {
       .map($)
       .map(li => ({
         title: li.find('.title').text().trim(),
-        desc: li.find('.desc').text().replace(/\n/g, '. '),
+        desc: li.find('.desc').text()
+          .replace(/\n/g, '. ')
+          .replace(/"/g, '\''),
       }))
       .value();
     return cb(null, companies);
