@@ -2,11 +2,15 @@
 
 const _ = require('lodash');
 const cheerio = require('cheerio');
+const csvWriter = require('csv-write-stream');
 const fibrous = require('fibrous');
+const fs = require('fs');
 const request = require('request');
 const winston = require('winston');
 
+const outputFilename = `out_dd_${_.now()}.csv`;
 // http://www.demoday.co.kr/companies/category/commerce/1
+const entryCountPerPage = 16;
 
 const logger = winston.createLogger({
   format: winston.format.combine(
@@ -21,6 +25,36 @@ const logger = winston.createLogger({
     new winston.transports.File({ filename: 'dd_crawler.log' })
   ]
 });
+
+function getCategories(cb) {
+  const url = 'http://www.demoday.co.kr/companies';
+  request({
+    url: url,
+  }, function (error, response, body) {
+    if (error) {
+      return cb(error);
+    }
+
+    var $ = cheerio.load(body);
+
+    return cb(null, _.chain($('.startup-category li'))
+      .map($)
+      .map(li => ({
+        title: li.find('a').text(),
+        count: _
+          .chain(li.find('.count').text())
+          .replace(/[(,)]/g, '')
+          .toInteger()
+          .value(),
+      }))
+      .map(obj => _.assign({
+        // TODO(sglim): Use it instead of 1
+        // totalPage: _.ceil(obj.count / entryCountPerPage),
+        totalPage: 1,
+      }, obj))
+      .value());
+  });
+}
 
 function getCompanies(category, page, cb) {
   const url = `http://www.demoday.co.kr/companies/category/${category}/${page}`;
@@ -42,18 +76,29 @@ function getCompanies(category, page, cb) {
 
     const companies = _.chain($('li'))
       .map($)
-      .map(li => ({ title: li.find('.title').text(), desc: li.find('.desc').text() }))
+      .map(li => ({ title: li.find('.title').text(), desc: li.find('.desc').text().replace(/\n/g, '. ') }))
       .value();
     return cb(null, companies);
   });
 }
 
-const main = fibrous(function mainSync() {
-  const compagePage1 = getCompanies.sync('commerce', 1);
-  logger.info(JSON.stringify(compagePage1));
-  // Crawl a page
-  // Until there is a data
-});
+function mainSync() {
+  const categories = getCategories.sync();
+  logger.info(JSON.stringify(categories));
+
+  const writer = csvWriter();
+  writer.pipe(fs.createWriteStream(outputFilename));
+
+  _.forEach(categories, category => {
+    _.times(category.totalPage, pageIdx => {
+      const page = pageIdx + 1;
+      const companies = getCompanies.sync(category.title, page);
+      _.forEach(companies, company => writer.write(company));
+    });
+  });
+  writer.end();
+}
+const main = fibrous(mainSync);
 
 if (require.main === module) {
   main((err) => {
