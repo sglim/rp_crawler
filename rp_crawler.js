@@ -10,8 +10,8 @@
 // Yes! https://www.rocketpunch.com/api/companies/template?page=1&q=
 
 const _ = require('lodash');
-const cheerio = require('cheerio')
-const Crawler = require("crawler");
+const cheerio = require('cheerio');
+const Crawler = require('crawler');
 const csvWriter = require('csv-write-stream');
 const fibrous = require('fibrous');
 const fs = require('fs');
@@ -41,7 +41,7 @@ function getRandomInt(min, max) {
 function parseTemplateBody(body) {
   const parsed = JSON.parse(body);
   const template = parsed.data.template;
-  return cheerio.load(template)
+  return cheerio.load(template);
 }
 
 function getProxies(cb) {
@@ -92,13 +92,15 @@ function getTotalPage(proxyList, cb) {
 
 function mainSync() {
   const proxyList = getProxies.sync();
+  // const proxyList = getProxiesAlter.sync();
+  logger.info(`${proxyList.length} proxies are found.`);
   const totalPage = getTotalPage.sync(proxyList);
 
   let doneCount = 0;
   logger.info(`Total: ${totalPage} pages`);
 
   const writer = csvWriter();
-  writer.pipe(fs.createWriteStream(outputFilename))
+  writer.pipe(fs.createWriteStream(outputFilename));
 
   const c = new Crawler({
     jquery: false,
@@ -151,7 +153,7 @@ function mainSync() {
 }
 
 if (require.main === module) {
-  fibrous(mainSync)((err, res) => {
+  fibrous(mainSync)((err) => {
     if (err) {
       logger.error(err);
     }

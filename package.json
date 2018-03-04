@@ -1,10 +1,10 @@
 {
   "name": "rp_crawler",
   "version": "1.0.0",
-  "description": "Rocket Punch Crawler",
-  "main": "index.js",
+  "description": "Rocket Punch / Demoday Crawler",
+  "main": "rp_crawler.js",
   "scripts": {
-    "start": "node index.js",
+    "start": "node rp_crawler.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
