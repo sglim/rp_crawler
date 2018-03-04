@@ -28,7 +28,7 @@ function main() {
   const csvFileText = fs.readFileSync(ddResultFilename, 'utf8');
   const records = parse(csvFileText, { columns: true });
 
-  const writer = csvWriter();
+  const writer = csvWriter({ headers: [ 'page', 'category', 'title', 'desc', 'keywords' ]});
   writer.pipe(fs.createWriteStream(outputFilename));
   logger.info(`Add keyword to ${ddResultFilename}`);
 
@@ -40,6 +40,7 @@ function main() {
       .filter(token => token.pos === 'Noun')
       .map(token => token.text)
       .value();
+    logger.info(JSON.stringify(keywords));
     writer.write(_.assign({
       keywords: keywords,
     }, record));
