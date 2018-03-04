@@ -89,6 +89,22 @@ function getCompanies(category, page, cb) {
   });
 }
 
+function getCompany(title, cb) {
+  // e.g., http://www.demoday.co.kr/company/StudioMotif
+  const url = `http://www.demoday.co.kr/company/${encodeURI(title)}`;
+  logger.info(`Retrieve detail info for ${title}...`);
+  request({
+    url: url,
+  }, function (error, response, body) {
+    if (error) {
+      return cb(error);
+    }
+
+    var $ = cheerio.load(body);
+    return cb(null, $('meta[property="og:description"]').attr('content'));
+  });
+}
+
 function mainSync() {
   const categories = getCategories.sync();
   logger.info(JSON.stringify(categories));
@@ -104,12 +120,12 @@ function mainSync() {
       const page = pageIdx + 1;
       const companies = getCompanies.sync(category.title, page);
       _.forEach(companies, company => {
-        if (_.endsWith(company, '...')) {
-          // TODO(sglim): Get full desc from detailed page
+        if (_.endsWith(company.desc, '...')) {
+          company.desc = getCompany.sync(company.title);
         }
         writer.write(_.assign({
           page: page,
-          category: category,
+          category: category.title,
           keyword: _.keys(mecab.sync.extractNounMap(company.desc)).join(','),
         }, company));
 
