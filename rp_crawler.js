@@ -159,4 +159,3 @@ if (require.main === module) {
     }
   });
 }
-

@@ -5,6 +5,8 @@
   "main": "rp_crawler.js",
   "scripts": {
     "start": "node rp_crawler.js",
+    "rp": "node rp_crawler.js",
+    "dd": "node dd_crawler.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
