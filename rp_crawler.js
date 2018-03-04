@@ -4,6 +4,8 @@
 // npm start
 // or (to skip some page)
 // SKIP={skipCount} npm start
+// or (not to use proxy)
+// USE_PROXY=false npm start
 
 // Sample
 // No! https://www.rocketpunch.com/companies?page=1&q=
@@ -17,6 +19,8 @@ const fibrous = require('fibrous');
 const fs = require('fs');
 const winston = require('winston');
 
+// If you want to use proxy, turn on it.
+const useProxy = process.env.USE_PROXY ? process.env.USE_PROXY === 'true' : true;
 const outputFilename = 'out.csv';
 const skipCount = process.env.SKIP ? parseInt(process.env.SKIP, 10) : 0;
 const myFormat = winston.format.printf(info => {
@@ -86,13 +90,14 @@ function getTotalPage(proxyList, cb) {
       done();
     }
   });
-  c.on('schedule', options => options.proxy=proxyList[0]);
+  if (useProxy) {
+    c.on('schedule', options => options.proxy=proxyList[0]);
+  }
   c.queue('https://www.rocketpunch.com/api/companies/template');
 }
 
 function mainSync() {
   const proxyList = getProxies.sync();
-  // const proxyList = getProxiesAlter.sync();
   logger.info(`${proxyList.length} proxies are found.`);
   const totalPage = getTotalPage.sync(proxyList);
 
@@ -104,8 +109,8 @@ function mainSync() {
 
   const c = new Crawler({
     jquery: false,
-    // rateLimit: 100,
-    maxConnections : 10,
+    rateLimit: 100,
+    // maxConnections : 10,
     // This will be called for each crawled page
     callback : function (error, res, done) {
       if (error) {
@@ -142,7 +147,9 @@ function mainSync() {
     doneCount += skipCount;
     logger.info(`Skip ${skipCount} entries`);
   }
-  c.on('schedule', options => options.proxy=proxyList[getRandomInt(0, proxyList.length)]);
+  if (useProxy) {
+    c.on('schedule', options => options.proxy=proxyList[getRandomInt(0, proxyList.length)]);
+  }
   _.times(totalPage, (pageIdx) => {
     if (skipCount && skipped < skipCount) {
       skipped++;
