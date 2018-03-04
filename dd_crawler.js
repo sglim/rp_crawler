@@ -5,12 +5,12 @@ const cheerio = require('cheerio');
 const csvWriter = require('csv-write-stream');
 const fibrous = require('fibrous');
 const fs = require('fs');
+const mecab = require('mecab-ffi');
 const request = require('request');
 const winston = require('winston');
 
 const outputFilename = `out_dd_${_.now()}.csv`;
 // http://www.demoday.co.kr/companies/category/commerce/1
-const entryCountPerPage = 16;
 
 const logger = winston.createLogger({
   format: winston.format.combine(
@@ -40,7 +40,11 @@ function getCategories(cb) {
     return cb(null, _.chain($('.startup-category li'))
       .map($)
       .map(li => ({
-        title: li.find('a').text(),
+        title: _
+          .chain(li.find('a').text())
+          .replace(/[ /]/g, '-')
+          .toLower()
+          .value(),
         count: _
           .chain(li.find('.count').text())
           .replace(/[(,)]/g, '')
@@ -76,7 +80,10 @@ function getCompanies(category, page, cb) {
 
     const companies = _.chain($('li'))
       .map($)
-      .map(li => ({ title: li.find('.title').text(), desc: li.find('.desc').text().replace(/\n/g, '. ') }))
+      .map(li => ({
+        title: li.find('.title').text().trim(),
+        desc: li.find('.desc').text().replace(/\n/g, '. '),
+      }))
       .value();
     return cb(null, companies);
   });
@@ -88,12 +95,30 @@ function mainSync() {
 
   const writer = csvWriter();
   writer.pipe(fs.createWriteStream(outputFilename));
+  const totalPageCount = _.sumBy(categories, 'totalPage');
+  logger.info(`Total page count: ${totalPageCount}`);
+  let donePageCount = 0;
 
   _.forEach(categories, category => {
     _.times(category.totalPage, pageIdx => {
       const page = pageIdx + 1;
       const companies = getCompanies.sync(category.title, page);
-      _.forEach(companies, company => writer.write(company));
+      _.forEach(companies, company => {
+        if (_.endsWith(company, '...')) {
+          // TODO(sglim): Get full desc from detailed page
+        }
+        writer.write(_.assign({
+          page: page,
+          category: category,
+          keyword: _.keys(mecab.sync.extractNounMap(company.desc)).join(','),
+        }, company));
+
+      });
+      donePageCount++;
+      const curPercentage = parseInt(donePageCount / totalPageCount * 100, 10);
+      if (parseInt((donePageCount - 1) / totalPageCount * 100, 10) !== curPercentage) {
+        logger.info(`Progressing...${donePageCount} done (${curPercentage}%)`);
+      }
     });
   });
   writer.end();
