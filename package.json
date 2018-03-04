@@ -8,6 +8,7 @@
     "rp": "node rp_crawler.js",
     "dd": "node dd_crawler.js",
     "test_mecab": "node test_mecab.js",
+    "test_pagerank": "node test_pagerank.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -27,6 +28,7 @@
     "fibrous": "^0.4.0",
     "lodash": "^4.17.5",
     "mecab-ffi": "^0.2.0",
+    "pagerank-js": "^0.3.0",
     "winston": "^3.0.0-rc1"
   }
 }
